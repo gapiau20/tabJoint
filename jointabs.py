@@ -41,13 +41,15 @@ def read_file(file:str,**kwargs):
     #if reader not available
     return None
 
-def load_files(file_paths,**reader_kwargs):
+def load_files(file_paths:list[str],add_filenamecolumn:bool,filename_column='TABLENAME',**reader_kwargs):
     """
     Load a list of csv files into pd Dataframe
     """
     dfs = []
     for path in file_paths:
         df=read_file(path,**reader_kwargs)
+        if add_filenamecolumn:
+            df[filename_column]=Path(path).name
         dfs.append(df)
     return dfs
 
@@ -65,11 +67,11 @@ def merge_patient_dataframes(dfs, patient_col="Patient"):
     return merged
 
 
-def merge_files(file_paths, output_path, patient_col="Patient",**reader_kwargs):
+def merge_files(file_paths, output_path, patient_col="Patient",add_filenamecolumn=True,filename_column='TABLENAME',**reader_kwargs):
     """
     Read, merge, save
     """
-    dfs = load_files(file_paths,**reader_kwargs)
+    dfs = load_files(file_paths,add_filenamecolumn,filename_column,**reader_kwargs)
     merged_df = merge_patient_dataframes(dfs, patient_col=patient_col)
     write_table(merged_df,output_path,index=False)
     return merged_df
