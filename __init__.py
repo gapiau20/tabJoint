@@ -1,1 +1,1 @@
-from read import merge_files
+from read import *
