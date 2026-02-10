@@ -42,7 +42,7 @@ def load_files(file_paths,reader_kwargs={}):
     return dfs
 
 
-def merge_patient_files(dfs, patient_col="Patient"):
+def merge_patient_dataframes(dfs, patient_col="Patient"):
     """
     Concat Dataframe with overlapping patients/variables.
     For each patient, use the first non-nan value if it exists.
@@ -60,7 +60,7 @@ def merge_files(file_paths, output_path, patient_col="Patient"):
     Read, merge, save
     """
     dfs = load_files(file_paths)
-    merged_df = merge_patient_files(dfs, patient_col=patient_col)
+    merged_df = merge_patient_dataframes(dfs, patient_col=patient_col)
     merged_df.to_csv(output_path, index=False)
     return merged_df
 
