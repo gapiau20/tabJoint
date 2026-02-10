@@ -4,6 +4,15 @@ from pathlib import Path
 import os
 import argparse
 
+def write_table(df:pd.DataFrame, filepath:str, **kwargs):
+    extension=Path(filepath).suffix.lower()
+    writers={
+        ".csv": df.to_csv,
+        ".xlsx": df.to_excel
+        }
+    if extension in writers:
+        writers[extension](filepath, **kwargs)
+
 def get_readers(**kwargs):
     return{
             '.csv':lambda x:pd.read_csv(x,**kwargs),
@@ -11,6 +20,7 @@ def get_readers(**kwargs):
             '.xlsx':lambda x:pd.read_excel(x,**kwargs),
             '.xls':lambda x:pd.read_excel(x,**kwargs),
         }
+
 
 def extract_files(input_directory):
     dir_path=Path(input_directory)
@@ -26,12 +36,12 @@ def read_file(file:str,**kwargs):
     extension=Path(file).suffix.lower()
 
     if extension in readers.keys():
-        return readers[extension](file,**kwargs)
+        return readers[extension](file)
 
     #if reader not available
     return None
 
-def load_files(file_paths,reader_kwargs={}):
+def load_files(file_paths,**reader_kwargs):
     """
     Load a list of csv files into pd Dataframe
     """
@@ -55,13 +65,13 @@ def merge_patient_dataframes(dfs, patient_col="Patient"):
     return merged
 
 
-def merge_files(file_paths, output_path, patient_col="Patient"):
+def merge_files(file_paths, output_path, patient_col="Patient",**reader_kwargs):
     """
     Read, merge, save
     """
-    dfs = load_files(file_paths)
+    dfs = load_files(file_paths,**reader_kwargs)
     merged_df = merge_patient_dataframes(dfs, patient_col=patient_col)
-    merged_df.to_csv(output_path, index=False)
+    write_table(merged_df,output_path,index=False)
     return merged_df
 
 def main():

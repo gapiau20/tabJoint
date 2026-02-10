@@ -208,5 +208,6 @@ __marimo__/
 
 
 #ouptut csv
-output.csv
+output.*
 outputs/*
+concatimprove.py
