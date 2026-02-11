@@ -22,7 +22,7 @@ def get_readers(**kwargs):
         }
 
 
-def extract_files(input_directory):
+def extract_files(input_directory)->list[str]:
     dir_path=Path(input_directory)
     if not os.path.isdir(input_directory):
         raise ValueError('{} is not a valid directory'.format(input_directory))
@@ -41,7 +41,7 @@ def read_file(file:str,**kwargs):
     #if reader not available
     return None
 
-def load_files(file_paths:list[str],add_filenamecolumn:bool,filename_column='TABLENAME',**reader_kwargs):
+def load_files(file_paths:list[str],add_filenamecolumn:bool,filename_column='TABLENAME',**reader_kwargs)->list[pd.DataFrame]:
     """
     Load a list of csv files into pd Dataframe
     """
@@ -54,7 +54,7 @@ def load_files(file_paths:list[str],add_filenamecolumn:bool,filename_column='TAB
     return dfs
 
 
-def merge_patient_dataframes(dfs, patient_col="Patient"):
+def merge_patient_dataframes(dfs, patient_col="Patient")->pd.DataFrame:
     """
     Concat Dataframe with overlapping patients/variables.
     For each patient, use the first non-nan value if it exists.
@@ -67,7 +67,7 @@ def merge_patient_dataframes(dfs, patient_col="Patient"):
     return merged
 
 
-def merge_files(file_paths, output_path, patient_col="Patient",add_filenamecolumn=True,filename_column='TABLENAME',**reader_kwargs):
+def merge_files(file_paths, output_path, patient_col="Patient",add_filenamecolumn=True,filename_column='TABLENAME',**reader_kwargs)->pd.DataFrame:
     """
     Read, merge, save
     """
@@ -75,6 +75,81 @@ def merge_files(file_paths, output_path, patient_col="Patient",add_filenamecolum
     merged_df = merge_patient_dataframes(dfs, patient_col=patient_col)
     write_table(merged_df,output_path,index=False)
     return merged_df
+
+def sanity_check_dataframes(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[str])->bool:
+    '''Check if all values of overlapping columns between df1 and df2 are equal'''
+    #common columns outside joint keys
+    col_intersec=df1.columns.intersection(df2.columns).difference(joint_keys)
+    if len(col_intersec)<=0:
+        return True #no common column to compare
+    #joint
+    joint=df1.merge(df2,on=joint_keys,suffixes=("_df1", "_df2"), how="inner")
+    if joint.empty:
+        return False #nothing common
+
+    comparisons=[]
+    for col in col_intersec:
+        s1=joint[col+'_df1']
+        s2=joint[col+'_df2']
+        #check if when both are non nan value is equal
+        equal= (s1==s2) | s1.isna() | s2.isna()
+        comparisons.append(equal)
+
+        conflict = (~s1.isna()) & (~s2.isna()) & (s1 != s2)
+
+        if conflict.any():
+            has_conflict = True
+
+            print(f"\nConflict detected in column: {col}")
+            print(
+                joint.loc[conflict, joint_keys + 
+                          [f"{col}_df1", f"{col}_df2"]]
+            )
+            raise ValueError('Debug')
+
+    return pd.concat(comparisons,axis=1).all().all()
+
+def parse_conflicts(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[str])->bool:
+    '''Check if all values of overlapping columns between df1 and df2 are equal
+    When conflict detected, parse to decide manually whether to ignore the conflict
+
+    returns True if no conflict is detected or if the user validates the consistency of the dataframes
+    despite the conflict, otherwise false
+    '''
+    #common columns outside joint keys
+    col_intersec=df1.columns.intersection(df2.columns).difference(joint_keys)
+    if len(col_intersec)<=0:
+        return True #no common column to compare
+    #joint
+    joint=df1.merge(df2,on=joint_keys,suffixes=("_df1", "_df2"), how="inner")
+    if joint.empty:
+        return False #nothing common
+
+    comparisons=[]
+    for col in col_intersec:
+        s1=joint[col+'_df1']
+        s2=joint[col+'_df2']
+        #check if when both are non nan value is equal
+        
+
+        conflict = (~s1.isna()) & (~s2.isna()) & (s1 != s2)
+
+        if conflict.any():
+            has_conflict = True
+
+            print(f"\nConflict detected in column: {col}")
+            print(
+                joint.loc[conflict, joint_keys + 
+                          [f"{col}_df1", f"{col}_df2"]]
+            )
+            proceed=input('Is conflict OK or not Y/N')
+            if proceed.lower()=='y': 
+                conflict[:]=False
+            else:
+                conflict[:]==True
+        comparisons.append(~conflict)
+
+    return pd.concat(comparisons,axis=1).all().all()
 
 def main():
     parser=argparse.ArgumentParser(
