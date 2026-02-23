@@ -76,6 +76,21 @@ def merge_files(file_paths, output_path, patient_col="Patient",add_filenamecolum
     write_table(merged_df,output_path,index=False)
     return merged_df
 
+def normalize_str_series(s:pd.Series)->pd.Series:
+    return (
+        s.astype(str)
+        .str.casefold() #lower case and ß->ss
+        .str.replace('-',' ',regex=False)#umlaut
+        .str.replace("ä", "ae", regex=False)
+        .str.replace("ö", "oe", regex=False)
+        .str.replace("ü", "ue", regex=False)
+        .str.replace("-", " ", regex=False)
+        .str.replace(r"\s+"," ",regex=True)#multiple spaces
+        .str.strip()#start and end of line
+    )
+
+
+
 def sanity_check_dataframes(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[str])->bool:
     '''Check if all values of overlapping columns between df1 and df2 are equal'''
     #common columns outside joint keys
@@ -91,12 +106,18 @@ def sanity_check_dataframes(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[st
     for col in col_intersec:
         s1=joint[col+'_df1']
         s2=joint[col+'_df2']
-        #check if when both are non nan value is equal
-        equal= (s1==s2) | s1.isna() | s2.isna()
+
+        # numeric case
+        if pd.api.types.is_numeric_dtype(s1) and pd.api.types.is_numeric_dtype(s2):
+            #check if when both are non nan value is equal
+            equal= (s1==s2) | s1.isna() | s2.isna()
+        #str case : first we need to normalize the str
+        elif s1.dtype=='str':
+            equal=(normalize_str_series(s1)==normalize_str_series(s2)) | s1.isna() | s2.isna()
+        else:
+            equal = (s1 == s2) | s1.isna() | s2.isna()
         comparisons.append(equal)
-
-        conflict = (~s1.isna()) & (~s2.isna()) & (s1 != s2)
-
+        conflict=~equal
         if conflict.any():
             has_conflict = True
 
