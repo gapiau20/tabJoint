@@ -211,3 +211,6 @@ __marimo__/
 output.*
 outputs/*
 concatimprove.py
+
+#notebooks
+*.ipynb

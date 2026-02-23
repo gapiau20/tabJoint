@@ -20,6 +20,7 @@ def get_readers(**kwargs):
             '.xlsx':lambda x:pd.read_excel(x,**kwargs),
             '.xls':lambda x:pd.read_excel(x,**kwargs),
         }
+        
 
 
 def extract_files(input_directory)->list[str]:
@@ -47,7 +48,10 @@ def load_files(file_paths:list[str],add_filenamecolumn:bool,filename_column='TAB
     """
     dfs = []
     for path in file_paths:
-        df=read_file(path,**reader_kwargs)
+        try: 
+            df=read_file(path,**reader_kwargs)
+        except ValueError:
+            print('Error Reading {}'.format(path))
         if add_filenamecolumn:
             df[filename_column]=Path(path).name
         dfs.append(df)
