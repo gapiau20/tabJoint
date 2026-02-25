@@ -138,9 +138,11 @@ def parse_conflicts(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[str])->boo
     '''Check if all values of overlapping columns between df1 and df2 are equal
     When conflict detected, parse to decide manually whether to ignore the conflict
 
-    returns True if no conflict is detected or if the user validates the consistency of the dataframes
-    despite the conflict, otherwise false
+    returns False if no conflict is detected, or if the user validates the consistency of the dataframes
     '''
+    if df1.empty or df2.empty: 
+        print('Empty dataframe')
+        return False
     #common columns outside joint keys
     col_intersec=df1.columns.intersection(df2.columns).difference(joint_keys)
     if len(col_intersec)<=0:
@@ -172,7 +174,7 @@ def parse_conflicts(df1:pd.DataFrame,df2:pd.DataFrame,joint_keys:list[str])->boo
                 conflict[:]=False
             else:
                 conflict[:]==True
-        comparisons.append(~conflict)
+        comparisons.append(conflict)
 
     return pd.concat(comparisons,axis=1).all().all()
 
